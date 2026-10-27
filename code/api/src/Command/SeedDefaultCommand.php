@@ -20,6 +20,6 @@ readonly class SeedDefaultCommand
     public function execute(ArgvInput $argvInput): void
     {
       MainTestSeed::init($this->connectionStore);
-      UserTestSeed::init($this->connectionStore);
+    //   UserTestSeed::init($this->connectionStore);
     }
 }
