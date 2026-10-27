@@ -1,0 +1,505 @@
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Личный кабинет</title>
+  <style>
+    * {box-sizing: border-box;}
+    :root {
+      --bg: #000000;
+      --surface: #111111;
+      --surface-2: #000;
+      --text: #f5f5f5;
+      --muted: /*#bdbdbd;*/ #ffffff;
+      --border: #2a2a2a;
+      --danger: #ff5252;
+      --success: #69f0ae;
+      --shadow: 0 6px 18px rgba(0, 0, 0, 0.35);
+      --accent: #7c4dff;
+    }
+    input:focus, input:focus-visible, select:focus, select:focus-visible, button:focus, button:focus-visible {
+        outline: none;
+    }
+    body {
+        font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+         margin: 0; min-height: 100vh; background: var(--bg); color: var(--text); }
+    .shell { margin: 0 auto; padding: 20px 16px 36px; height: 100vh;
+        display: flex;
+        flex-direction: column;
+        justify-content: space-between;
+    }
+    header { display: flex; align-items: center; justify-content: space-between; gap: 12px; /*margin-bottom: 12px;*/ flex-wrap: wrap; }
+    h1 { margin: 0; font-size: 20px; font-weight: 650; }
+    .muted { color: var(--muted); }
+    .error { color: var(--danger); }
+    .success { color: var(--success); }
+    .pill { border-radius: 999px; padding: 6px 10px; }
+    .pill strong { font-weight: 700; }
+    .box { height:100%;/*background: var(--surface); border: 1px solid var(--border); border-radius: 10px;*/ 
+    padding: 12px; box-shadow: var(--shadow); margin: 0 0; 
+    
+    /* display: flex;
+    flex-direction: column;
+    justify-content: space-between; */
+    }
+    #chartsCanvasContainer {
+        height: 100%;
+        padding: 0;
+        box-shadow: var(--shadow);
+        margin: 0 0;
+    }
+    #marketsContent {
+        height: 100%;
+    }
+    section {
+        display: flex;
+        flex-direction: column;
+        justify-content: space-between;
+    }
+    .nav { display: flex; gap: 8px; flex-wrap: wrap; }
+    .nav button { padding: 8px 10px; border-radius: 10px; border: none; background: #000; color: var(--text); cursor: pointer; }
+    .nav button[aria-current="page"] { 
+        border-color: var(--accent); box-shadow: 0 0 0 1px var(--accent) inset;
+        /*border-bottom: 1px solid #fff;*/
+        box-shadow: none;
+        border-radius: 0;
+        border-bottom: 1px solid var(--border);
+    }
+    button.action { 
+        border: 1px solid #ffffff;
+        background: #ffffff;
+        padding: 10px;
+        color: #000000; font-weight: 650; }
+    button.danger { border-color: var(--danger); background: var(--danger); color: #000; font-weight: 650; }
+    button:hover { opacity: .92; }
+    .chartsCanvasContainer canvas {height: 100%;}
+    .row { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
+    .row > * { min-width: 220px; }
+    input, select { 
+        padding: 10px; width: 100%; box-sizing: border-box; 
+        border-radius: 0;
+        border: none;
+        border-bottom: 1px solid var(--border); 
+        background: var(--surface-2); color: var(--text);
+    }
+    table { width: 100%; border-collapse: collapse; font-size: 13px; }
+    th, td { padding: 8px 6px; border-bottom: 1px solid var(--border); vertical-align: middle; }
+    th { text-align: left; color: var(--muted); font-weight: 600; }
+    .mono { font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace; }
+    .flex { display: flex; gap: 8px; flex-wrap: wrap; }
+    .hidden { display: none; }
+    .small { font-size: 12px; }
+    .pl-positive { color: var(--success); }
+    .pl-negative { color: var(--danger); }
+    .pl-zero { color: var(--muted); }
+    .card { /*border: 1px solid var(--border); border-radius: 10px;*/ padding: 10px; /*background: var(--surface-2);*/ }
+    .grid { display: grid; gap: 8px; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); }
+  </style>
+</head>
+<body>
+  <div class="shell">
+    <header>
+
+
+    <nav class="nav box" aria-label="Разделы">
+      <button data-view="overview" aria-current="page">Обзор</button>
+      <button data-view="challenge-accounts">Challenge аккаунты</button>
+      <button data-view="markets">Рынки</button>
+      <button data-view="charts">Charts</button>
+      <button data-view="positions">Позиции</button>
+      <button data-view="history">История</button>
+    </nav>
+      <!-- <h1>Личный кабинет</h1> -->
+      <div class="flex" style="gap:8px;">
+        <div id="balanceBar" class="pill muted">—</div>
+        <div style="display: none;" id="globalState" class="muted small"></div>
+      </div>
+    </header>
+
+    <section style="display: none!important;" id="statusBox" class="box muted">Загрузка…</section>
+
+    <section id="view-overview" class="box">
+      <!-- <h2>Обзор</h2> -->
+      <div id="overviewContent" class="muted">Загрузка активного челленджа…</div>
+    </section>
+
+    <section id="view-challenge-accounts" class="box hidden">
+      <!-- <h2>Challenge аккаунты</h2> -->
+      <div id="challengeAccountsContent" class="muted">Загрузка…</div>
+    </section>
+
+    <section id="view-markets" class="box hidden">
+      <!-- <h2>Рынки</h2> -->
+      <div id="marketsContent" class="muted">Загрузка рынков…</div>
+    </section>
+
+    <section id="view-charts" class="box hidden">
+      <!-- <h2>Charts</h2> -->
+      <div id="chartsContent" class="muted">Пара не выбрана. Откройте рынки и выберите инструмент.</div>
+      <div style="padding: 0 10px;" class="row">
+        <button style="display:none!important;" id="openMarketsModalBtn" class="action">Выбрать рынок</button>
+        <div id="selectedPairLabel" class="muted"></div>
+
+        <div class="flex" style="gap: 16px; margin: 0;">
+        <div>
+            <div class="muted small">Покупка (Bid)</div>
+            <div id="currentBid" class="mono">—</div>
+        </div>
+
+        <div>
+            <div class="muted small">Продажа (Ask)</div>
+            <div id="currentAsk" class="mono">—</div>
+        </div>
+        </div>
+
+        <div style="display: none!important;" id="chartsSocketState" class="small muted">WS: —</div>
+      </div>
+      <div id="createPositionBox" class="card">
+        <div class="row">
+          <div>
+            <label class="small muted">
+              <select id="positionDirection">
+                <option value="BUY">BUY</option>
+                <option value="SELL">SELL</option>
+              </select>
+            </label>
+          </div>
+          <div>
+            <label class="small muted"> 
+              <input id="positionSize" type="number" step="0.01" min="0.01" value="0.01" />
+            </label>
+          </div>
+          <div>
+            <button id="createPositionBtn" class="action">Открыть позицию</button>
+          </div>
+        </div>
+        <div id="createPositionState" class="small muted"></div>
+      </div>
+
+      <div class="box">
+        <div id="chartsCanvasContainer"></div>
+      </div>
+
+      <div id="marketsModal" class="box hidden">
+        <h3>Выбор рынка</h3>
+        <div id="marketsModalContent" class="muted">Список рынков пуст. Откройте раздел Рынки для загрузки.</div>
+        <div class="flex"><button id="closeMarketsModalBtn">Закрыть</button></div>
+      </div>
+    </section>
+
+    <section id="view-positions" class="box hidden">
+      <!-- <h2>Позиции</h2> -->
+      <div id="positionsContent" class="muted">Загрузка…</div>
+    </section>
+
+    <section id="view-history" class="box hidden">
+      <!-- <h2>История</h2> -->
+      <div id="historyContent" class="muted">Загрузка…</div>
+    </section>
+  </div>
+
+  <script src="chartComponent.js"></script>
+  <script src="overview.js"></script>
+  <script src="challengeAccounts.js"></script>
+  <script src="markets.js"></script>
+  <script src="charts.js"></script>
+  <script src="positions.js"></script>
+  <script src="history.js"></script>
+  <script>
+    const statusBox = document.getElementById('statusBox');
+    const globalStateEl = document.getElementById('globalState');
+    const balanceBar = document.getElementById('balanceBar');
+
+    const views = {
+      overview: document.getElementById('view-overview'),
+      'challenge-accounts': document.getElementById('view-challenge-accounts'),
+      markets: document.getElementById('view-markets'),
+      charts: document.getElementById('view-charts'),
+      positions: document.getElementById('view-positions'),
+      history: document.getElementById('view-history'),
+    };
+
+    const navButtons = Array.from(document.querySelectorAll('nav button[data-view]'));
+
+    const overviewContent = document.getElementById('overviewContent');
+
+    const challengeAccountsContent = document.getElementById('challengeAccountsContent');
+    
+
+    const marketsContent = document.getElementById('marketsContent');
+
+
+    const state = {
+      token: 'r4nd0mTok3nValue20',
+      lastError: null,
+      markets: [],
+      selectedPairKey: 'selectedChartPair',
+      currentView: 'overview',
+      chartData: [],
+      chartDataTimes: new Set(),
+      balanceCurrency: null,
+    };
+
+    function show(el) { el.classList.remove('hidden'); }
+    function hide(el) { el.classList.add('hidden'); }
+
+    function getData(payload) {
+      if (payload && typeof payload === 'object' && 'data' in payload) return payload.data;
+      return payload;
+    }
+
+    async function api(path, options = {}) {
+      const headers = { 'Content-Type': 'application/json', ...(options.headers || {}) };
+      if (state.token) headers.Authorization = `Bearer ${state.token}`;
+
+      const res = await fetch(path, { ...options, headers });
+      const ct = res.headers.get('content-type') || '';
+      const data = ct.includes('application/json') ? await res.json() : await res.text();
+
+      if (!res.ok) {
+        const message = (data && data.message) || (typeof data === 'string' ? data : 'Ошибка запроса');
+        throw new Error(message);
+      }
+      return data;
+    }
+
+    function setStatus(message, kind = 'muted') {
+      statusBox.textContent = message;
+      statusBox.className = `box ${kind}`;
+    }
+
+    function setGlobalState() {
+      globalStateEl.textContent = state.token ? 'Токен установлен.' : 'Токен отсутствует.';
+    }
+
+    function formatMoney(value, currency = '$') {
+      if (value === null || value === undefined || value === '') return '—';
+
+      const normalizedCurrency = (() => {
+        const text = String(currency ?? '').trim();
+        if (!text) return '$';
+        const upper = text.toUpperCase();
+        if (upper === 'USD') return '$';
+        if (text.startsWith('$')) return '$';
+        return text;
+      })();
+
+      const text = String(value).trim();
+      const sign = text.startsWith('-') ? '-' : '';
+      const digits = text.replace(/[^0-9]/g, '');
+      if (!digits) return '—';
+
+      const encoded = Number(digits);
+      if (!Number.isFinite(encoded)) return '—';
+
+      const major = Math.trunc(encoded / 10000);
+      const minor = Math.trunc((encoded % 10000) / 100);
+      const minorText = String(minor).padStart(2, '0');
+
+      return `${sign}${normalizedCurrency}${major}.${minorText}`;
+    }
+
+    function setBalanceBar(balance, currency) {
+      balanceBar.textContent = (balance === null || balance === undefined)
+        ? '—'
+        : formatMoney(balance, currency ?? state.balanceCurrency ?? '$');
+      balanceBar.className = 'pill';
+    }
+
+    async function loadTopBalance() {
+      try {
+        const raw = await api('/api/balance');
+        const data = getData(raw) || {};
+        const balance = data.balance;
+        const currency = data.currency;
+        if (currency !== null && currency !== undefined && currency !== '') {
+          state.balanceCurrency = currency;
+        }
+        setBalanceBar(balance, currency);
+      } catch (e) {
+        balanceBar.textContent = 'Баланс: —';
+        balanceBar.className = 'pill error';
+      }
+    }
+
+    function asText(value) {
+      if (value === null || value === undefined || value === '') return '—';
+      if (typeof value === 'object') return JSON.stringify(value);
+      return String(value);
+    }
+
+    function renderKeyValueGrid(obj) {
+      const entries = Object.entries(obj || {});
+      if (!entries.length) return '<div class="muted">Нет данных</div>';
+      return `<div class="grid">${entries.map(([k, v]) => `<div class="card"><div class="small muted">${k}</div><div class="mono">${asText(v)}</div></div>`).join('')}</div>`;
+    }
+
+    function renderTable(items, columns) {
+      if (!Array.isArray(items) || items.length === 0) return '<div class="muted">Нет данных</div>';
+      const head = `<tr>${columns.map(c => `<th>${c.label}</th>`).join('')}</tr>`;
+      const body = items.map(item => {
+        return `<tr>${columns.map(c => `<td>${asText(typeof c.value === 'function' ? c.value(item) : item[c.value])}</td>`).join('')}</tr>`;
+      }).join('');
+      return `<table><thead>${head}</thead><tbody>${body}</tbody></table>`;
+    }
+
+    function switchView(viewName) {
+      state.currentView = viewName;
+      Object.values(views).forEach(hide);
+      show(views[viewName]);
+      navButtons.forEach(btn => btn.setAttribute('aria-current', btn.dataset.view === viewName ? 'page' : 'false'));
+    }
+
+
+    function setSelectedPair(id) {
+      localStorage.setItem(state.selectedPairKey, id);
+    }
+
+
+
+    let wsInfo = null;
+    let wsInfoReconnectTimer = null;
+
+    function wsInfoUrl() {
+      const scheme = window.location.protocol === 'https:' ? 'wss' : 'ws';
+      return `${scheme}://${window.location.host}/ws-info/`;
+    }
+
+    function scheduleWsInfoReconnect() {
+      if (wsInfoReconnectTimer !== null) return;
+      wsInfoReconnectTimer = window.setTimeout(() => {
+        wsInfoReconnectTimer = null;
+        connectWsInfo();
+      }, 2000);
+    }
+
+    function connectWsInfo() {
+      if (wsInfo && (wsInfo.readyState === WebSocket.OPEN || wsInfo.readyState === WebSocket.CONNECTING)) return;
+
+      try {
+        wsInfo = new WebSocket(wsInfoUrl());
+      } catch (e) {
+        scheduleWsInfoReconnect();
+        return;
+      }
+
+      wsInfo.addEventListener('message', (event) => {
+        let payload;
+        try {
+          payload = JSON.parse(event.data);
+        } catch (e) {
+          return;
+        }
+
+        if (payload && payload.type === 'balance') {
+          const balance = 'data' in payload ? payload.data : undefined;
+          setBalanceBar(balance, state.balanceCurrency);
+        }
+      });
+
+      wsInfo.addEventListener('close', scheduleWsInfoReconnect);
+      wsInfo.addEventListener('error', () => {
+        try { wsInfo.close(); } catch (e) {}
+      });
+    }
+
+    navButtons.forEach(btn => {
+      btn.addEventListener('click', () => {
+        const view = btn.dataset.view;
+        window.location.hash = `#${view}`;
+      });
+    });
+
+    async function loadOverview() {
+        window.OverviewPage.load();
+    }
+
+    async function loadChallengeAccounts() {
+      await window.ChallengeAccountsPage.load();
+    }
+
+
+    async function loadMarkets() {
+        await window.MarketsPage.load();
+    }
+
+
+
+
+
+    async function handleRoute() {
+      setGlobalState();
+      await loadTopBalance();
+      const view = (window.location.hash || '#overview').slice(1);
+      const viewName = views[view] ? view : 'overview';
+      switchView(viewName);
+
+      if (viewName === 'overview') await loadOverview();
+      if (viewName === 'challenge-accounts') await loadChallengeAccounts();
+      if (viewName === 'markets') await loadMarkets();
+      if (viewName === 'charts') {
+        await window.ChartsPage.load();
+      } else {
+        window.ChartsPage.disconnect();
+      }
+      if (viewName === 'positions') {
+        await window.PositionsPage.load();
+      }
+      if (viewName === 'history') {
+        await window.HistoryPage.load();
+      }
+    }
+
+
+    window.OverviewPage.init({
+        api,
+        getData,
+        asText,
+        setStatus,
+        formatMoney,
+    });
+    window.ChallengeAccountsPage.init({
+        api,
+        getData,
+        asText,
+        setStatus,
+        loadOverview,
+        loadTopBalance,
+        formatMoney,
+    });
+    window.MarketsPage.init({
+        api,
+        getData,
+        asText,
+        setStatus,
+        setSelectedPair,
+    });
+    window.ChartsPage.init({
+        api,
+        getData,
+        setStatus,
+        state,
+        loadMarkets,
+    });
+    window.PositionsPage.init({
+        api,
+        getData,
+        asText,
+        renderKeyValueGrid,
+        renderTable,
+        setStatus,
+    });
+    window.HistoryPage.init({
+        api,
+        getData,
+        asText,
+        renderTable,
+        setStatus,
+    });
+    window.addEventListener('hashchange', handleRoute);
+    connectWsInfo();
+    handleRoute();
+  </script>
+</body>
+</html>

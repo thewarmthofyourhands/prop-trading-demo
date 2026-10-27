@@ -1,0 +1,79 @@
+challenge_index:
+  uri: /api/challenges
+  handler: App\Controller\Challenge\ChallengeController::index
+  method: GET
+
+order_store:
+  uri: /api/orders
+  handler: App\Controller\Order\OrderController::store
+  method: POST
+
+order_show:
+  uri: /api/orders/:id
+  handler: App\Controller\Order\OrderController::show
+  method: GET
+
+order_payment:
+  uri: /api/orders/:id/payment
+  handler: App\Controller\Order\OrderController::payment
+  method: POST
+
+user_store:
+  uri: /api/users
+  handler: App\Controller\User\UserController::store
+  method: POST
+
+challenge_account_index:
+  uri: /api/challenge-accounts
+  handler: App\Controller\Challenge\ChallengeAccountController::index
+  method: GET
+
+challenge_account_show:
+  uri: /api/challenge-accounts/:id
+  handler: App\Controller\Challenge\ChallengeAccountController::show
+  method: GET
+
+challenge_account_activate:
+  uri: /api/challenge-accounts/:id/activate
+  handler: App\Controller\Challenge\ChallengeAccountController::activate
+  method: POST
+
+capital_markets:
+  uri: /api/markets
+  handler: App\Controller\Capital\CapitalController::markets
+  method: GET
+
+capital_market_prices:
+  uri: /api/markets/:id/prices
+  handler: App\Controller\Capital\CapitalController::marketPrices
+  method: GET
+
+capital_positions:
+  uri: /api/positions
+  handler: App\Controller\Capital\CapitalController::positions
+  method: GET
+
+capital_position_store:
+  uri: /api/positions
+  handler: App\Controller\Capital\CapitalController::createPosition
+  method: POST
+
+capital_position_show:
+  uri: /api/positions/:id
+  handler: App\Controller\Capital\CapitalController::position
+  method: GET
+
+capital_position_close:
+  uri: /api/positions/:id
+  handler: App\Controller\Capital\CapitalController::closePosition
+  method: DELETE
+
+capital_history:
+  uri: /api/history
+  handler: App\Controller\Capital\CapitalController::history
+  method: GET
+
+balance_show:
+  uri: /api/balance
+  handler: App\Controller\BalanceController::show
+  method: GET

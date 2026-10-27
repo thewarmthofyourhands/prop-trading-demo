@@ -1,0 +1,323 @@
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Challenge Shop</title>
+  <style>
+    * { box-sizing: border-box; }
+
+    :root {
+      --bg: #000000;
+      --surface: #000000;
+      --surface-2: #000000;
+      --text: #ffffff;
+      --muted: #ffffff;
+      --border: #ffffff;
+      --danger: #ffffff;
+      --success: #ffffff;
+      --shadow: none;
+      --accent: #ffffff;
+    }
+
+    input:focus, input:focus-visible,
+    select:focus, select:focus-visible,
+    button:focus, button:focus-visible {
+      outline: none;
+    }
+
+    body {
+      font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+      margin: 0;
+      min-height: 100vh;
+      background: var(--bg);
+      color: var(--text);
+    }
+
+    .shell {
+      max-width: 920px;
+      margin: 0 auto;
+      padding: 28px 18px 36px;
+    }
+
+    .header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      margin-bottom: 14px;
+    }
+
+    h1 { font-size: 20px; letter-spacing: 0.2px; margin: 0; font-weight: 600; }
+    h2 { margin: 0 0 10px; font-size: 16px; font-weight: 600; }
+
+    .badge {
+      color: var(--muted);
+      font-size: 12px;
+      border: 1px solid var(--border);
+      padding: 4px 8px;
+      border-radius: 999px;
+      background: var(--surface);
+    }
+
+    .box {
+      background: var(--surface);
+      padding: 14px;
+      margin: 12px 0;
+      box-shadow: var(--shadow);
+    }
+
+    button {
+      padding: 10px 14px;
+      cursor: pointer;
+      border-radius: 10px;
+      border: 1px solid #ffffff;
+      background: #ffffff;
+      color: #000000;
+      font-weight: 600;
+    }
+
+    button:hover { opacity: 0.9; }
+
+    input {
+      padding: 10px;
+      margin: 4px 0;
+      width: 100%;
+      box-sizing: border-box;
+      border-radius: 10px;
+      border: 1px solid var(--border);
+      background: var(--surface-2);
+      color: var(--text);
+    }
+
+    .row { display: flex; gap: 10px; flex-wrap: wrap; }
+    .row > * { flex: 1; min-width: 220px; }
+    .muted { color: var(--muted); }
+    .error { color: #ffffff; }
+    .success { color: #ffffff; }
+    .hidden { display: none; }
+
+    .challenge-card { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+    .challenge-title { font-weight: 600; }
+    .challenge-meta { font-size: 12px; color: var(--muted); }
+    .actions { display: flex; gap: 8px; flex-wrap: wrap; }
+  </style>
+</head>
+<body>
+  <div class="shell">
+    <section id="status" class="box muted">Сначала завершите регистрацию.</section>
+    <section id="challenges" class="box hidden"></section>
+
+    <section id="order" class="box hidden">
+      <h2>Заказ</h2>
+      <div id="orderInfo" class="muted"></div>
+      <div id="orderActions">
+        <button id="checkOrderBtn">Проверить статус заказа</button>
+        <button id="payBtn">Оплатить</button>
+      </div>
+      <div id="orderState" class="muted"></div>
+    </section>
+
+    <section id="register" class="box hidden">
+      <h2>Регистрация</h2>
+      <form id="registerForm">
+        <div class="row">
+          <label>Email
+            <input name="email" type="email" required>
+          </label>
+        </div>
+        <button type="submit">Зарегистрироваться</button>
+        <div id="registerState" class="muted"></div>
+      </form>
+    </section>
+
+    <script>
+      const statusEl = document.getElementById('status');
+      const challengesEl = document.getElementById('challenges');
+      const orderSection = document.getElementById('order');
+      const orderInfoEl = document.getElementById('orderInfo');
+      const orderStateEl = document.getElementById('orderState');
+      const checkOrderBtn = document.getElementById('checkOrderBtn');
+      const payBtn = document.getElementById('payBtn');
+      const registerSection = document.getElementById('register');
+      const registerForm = document.getElementById('registerForm');
+      const registerStateEl = document.getElementById('registerState');
+
+      const state = {
+        selectedChallengeId: null,
+        orderId: null,
+        registered: false,
+        challengesLoaded: false,
+        token: null,
+      };
+
+      async function api(path, options = {}) {
+        const headers = { 'Content-Type': 'application/json', ...(options.headers || {}) };
+        if (state.token) {
+          headers.Authorization = `Bearer ${state.token}`;
+        }
+        const res = await fetch(path, {
+          ...options,
+          headers,
+        });
+        let data = null;
+        const ct = res.headers.get('content-type') || '';
+        if (ct.includes('application/json')) {
+          data = await res.json();
+        } else {
+          data = await res.text();
+        }
+        if (!res.ok) {
+          const message = (data && data.message) || (typeof data === 'string' ? data : 'Ошибка запроса');
+          throw new Error(message);
+        }
+        return data;
+      }
+
+      function show(el) { el.classList.remove('hidden'); }
+      function hide(el) { el.classList.add('hidden'); }
+
+      function getData(payload) {
+        if (payload && typeof payload === 'object' && 'data' in payload) {
+          return payload.data;
+        }
+        return payload;
+      }
+
+      function renderChallenges(payload) {
+        const list = getData(payload);
+        if (!Array.isArray(list) || list.length === 0) {
+          statusEl.textContent = 'Челленджи недоступны.';
+          return;
+        }
+
+        const items = list.map((item) => {
+          const id = item.id ?? item.uuid ?? '';
+          const title = item.name ?? item.title ?? `Challenge ${id}`;
+          const price = item.price ?? item.cost ?? '';
+          const desc = item.description ? `<div class="muted">${item.description}</div>` : '';
+          const priceText = price !== '' ? `<div class="muted">Цена: ${price}</div>` : '';
+          return `<div class="box challenge-card"><div><div class="challenge-title">${title}</div>${desc}<div class="challenge-meta">${priceText || ''}</div></div><div class="actions"><button data-id="${id}">Купить</button></div></div>`;
+        }).join('');
+
+        challengesEl.innerHTML = `<h2>Доступные челленджи</h2>${items}`;
+        show(challengesEl);
+        statusEl.textContent = 'Выберите челлендж для покупки и создайте заказ.';
+
+        challengesEl.querySelectorAll('button[data-id]').forEach((btn) => {
+          btn.addEventListener('click', () => createOrder(btn.getAttribute('data-id')));
+        });
+      }
+
+      async function loadChallenges() {
+        try {
+          const data = await api('/api/challenges');
+          state.challengesLoaded = true;
+          renderChallenges(data);
+        } catch (e) {
+          statusEl.textContent = `Не удалось загрузить челленджи: ${e.message}`;
+          statusEl.className = 'box error';
+        }
+      }
+
+      async function createOrder(challengeId) {
+        if (!state.registered) {
+          statusEl.textContent = 'Сначала завершите регистрацию.';
+          statusEl.className = 'box error';
+          show(registerSection);
+          return;
+        }
+        state.selectedChallengeId = challengeId;
+        statusEl.textContent = 'Создание заказа…';
+        statusEl.className = 'box muted';
+        try {
+          const raw = await api('/api/orders', {
+            method: 'POST',
+            body: JSON.stringify({ challenge_id: challengeId }),
+          });
+          const data = getData(raw);
+          const id = data && (data.id ?? data.order_id ?? data.uuid);
+          state.orderId = id;
+          orderInfoEl.textContent = `Заказ создан. ID: ${id}`;
+          orderStateEl.textContent = '';
+          show(orderSection);
+          statusEl.textContent = 'Проверьте статус заказа и выполните оплату.';
+          statusEl.className = 'box muted';
+        } catch (e) {
+          statusEl.textContent = `Ошибка создания заказа: ${e.message}`;
+          statusEl.className = 'box error';
+        }
+      }
+
+      async function checkOrder() {
+        if (!state.orderId) return;
+        orderStateEl.textContent = 'Проверка статуса…';
+        try {
+          const raw = await api(`/api/orders/${encodeURIComponent(state.orderId)}`);
+          const data = getData(raw);
+          const status = (data && (data.status ?? data.state)) ?? JSON.stringify(data);
+          orderStateEl.textContent = `Статус: ${status}`;
+          orderStateEl.className = 'muted';
+        } catch (e) {
+          orderStateEl.textContent = `Ошибка: ${e.message}`;
+          orderStateEl.className = 'error';
+        }
+      }
+
+      async function payOrder() {
+        if (!state.orderId) return;
+        orderStateEl.textContent = 'Оплата…';
+        orderStateEl.className = 'muted';
+        try {
+          const raw = await api(`/api/orders/${encodeURIComponent(state.orderId)}/payment`, { method: 'POST' });
+          const msg = (raw && raw.message) || 'Оплата успешно выполнена. Переход в личный кабинет…';
+          orderStateEl.textContent = msg;
+          orderStateEl.className = 'success';
+          window.location.href = 'account.html';
+        } catch (e) {
+          orderStateEl.textContent = `Ошибка оплаты: ${e.message}`;
+          orderStateEl.className = 'error';
+        }
+      }
+
+      registerForm.addEventListener('submit', async (event) => {
+        event.preventDefault();
+        registerStateEl.textContent = 'Регистрация…';
+        registerStateEl.className = 'muted';
+
+        const form = new FormData(registerForm);
+        const payload = Object.fromEntries(form.entries());
+
+        try {
+          await api('/api/users', {
+            method: 'POST',
+            body: JSON.stringify(payload),
+          });
+          registerStateEl.textContent = 'Регистрация успешна. Теперь можно выбрать челлендж и оформить заказ.';
+          registerStateEl.className = 'success';
+          state.registered = true;
+          state.token = 'r4nd0mTok3nValue20';
+          hide(registerSection);
+          if (!state.challengesLoaded) {
+            statusEl.textContent = 'Загрузка списка челленджей…';
+            statusEl.className = 'box muted';
+            await loadChallenges();
+          } else {
+            show(challengesEl);
+            statusEl.textContent = 'Выберите челлендж для покупки и создайте заказ.';
+            statusEl.className = 'box muted';
+          }
+        } catch (e) {
+          registerStateEl.textContent = `Ошибка регистрации: ${e.message}`;
+          registerStateEl.className = 'error';
+        }
+      });
+
+      checkOrderBtn.addEventListener('click', checkOrder);
+      payBtn.addEventListener('click', payOrder);
+
+      show(registerSection);
+    </script>
+  </div>
+</body>
+</html>

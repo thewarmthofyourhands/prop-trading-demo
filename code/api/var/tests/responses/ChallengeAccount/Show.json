@@ -1,0 +1,37 @@
+{
+  "data": {
+    "id": 1,
+    "status": "active",
+    "created_at": "2026-10-24T14:01:00Z",
+    "challenge": {
+      "id": 1,
+      "name": "Stellar 1-Step",
+      "account_size": 6000,
+      "price": 99,
+      "currency": "USD",
+      "type": "1-step",
+      "rules": {
+        "profit_target": 10,
+        "daily_loss_limit": 3,
+        "maximum_loss_limit": 6,
+        "minimum_trading_days": 2
+      }
+    },
+    "trading_account": {
+      "id": 1,
+      "platform": "mt5",
+      "balance": 6200,
+      "currency": "USD",
+      "leverage": 100
+    },
+    "progress": {
+      "profit": 200,
+      "loss": 0,
+      "daily_loss": 0,
+      "trading_days_completed": 3
+    },
+    "violations": []
+  },
+  "message": "Ok",
+  "code": 20000
+}
